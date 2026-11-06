@@ -3,7 +3,12 @@ script_file <- sub("^--file=", "", script_file)
 script_folder <- dirname(normalizePath(script_file))
 
 source(file.path(script_folder, "common.R"))
-start_analysis("rnaseq", c("dplyr", "ggplot2", "eulerr", "ComplexHeatmap", "matrixStats", "rtracklayer", "UpSetR", "readr", "circlize", "viridis"))
+args <- commandArgs(TRUE)
+contrast_folder <- if (length(args)) normalizePath(args[1], mustWork = TRUE) else
+  file.path(data_dir, "rnaseq")
+analysis_name <- if (length(args)) "rnaseq_recalculated" else "rnaseq"
+
+start_analysis(analysis_name, c("dplyr", "ggplot2", "eulerr", "ComplexHeatmap", "matrixStats", "rtracklayer", "UpSetR", "readr", "circlize", "viridis"))
 dir.create("gene_lists", showWarnings = FALSE)
 dir.create("venns", showWarnings = FALSE)
 library(dplyr)
@@ -21,8 +26,22 @@ plot_euler <- function(x) {
   plot(euler(x), quantities = list(cex = .8), labels = list(cex = .7))
 }
 
-bud <- readr::read_tsv(derived_path("rnaseq", "bud.tsv"), show_col_types = FALSE)
-sdl <- readr::read_tsv(derived_path("rnaseq", "seedling.tsv"), show_col_types = FALSE)
+bud <- readr::read_tsv(file.path(contrast_folder, "bud.tsv"), show_col_types = FALSE)
+sdl <- readr::read_tsv(file.path(contrast_folder, "seedling.tsv"), show_col_types = FALSE)
+
+if (ncol(bud) < 52 || ncol(sdl) < 46) {
+  stop("Correlation plots require the GEO TPM matrices; rerun rnaseq_de.R with those files present")
+}
+
+# Missing tests are not significant. Use 1 only in the local plotting copies;
+# leave NA values intact in the statistical result files.
+for (column in grep("adj. p-value", names(bud), fixed = TRUE)) {
+  bud[[column]][!is.finite(bud[[column]])] <- 1
+}
+
+for (column in grep("adj. p-value", names(sdl), fixed = TRUE)) {
+  sdl[[column]][!is.finite(sdl[[column]])] <- 1
+}
 
 bud_msspd_mat_up <- matrix(FALSE, nrow = nrow(bud), ncol = 3,
   dimnames = list(bud$Gene, c("WT", "mtn", "G3")))
@@ -180,9 +199,11 @@ rownames(sdl_m) <- sdl$Gene
 colnames(bud_m) <- gsub(" TPM", "", colnames(bud_m), TRUE)
 colnames(sdl_m) <- gsub(" TPM", "", colnames(sdl_m), TRUE)
 
-bud_pcc2 <- cor(scale(bud_m[order(rowVars(bud_m), decreasing = TRUE)[1:1000],
-    c(17:24, 9:16, 1:8)]))
-sdl_pcc2 <- cor(scale(sdl_m[order(rowVars(sdl_m), decreasing = TRUE)[1:2000],
+bud_selected <- head(order(rowVars(bud_m), decreasing = TRUE, na.last = NA), 1000)
+sdl_selected <- head(order(rowVars(sdl_m), decreasing = TRUE, na.last = NA), 2000)
+
+bud_pcc2 <- cor(scale(bud_m[bud_selected, c(17:24, 9:16, 1:8)]))
+sdl_pcc2 <- cor(scale(sdl_m[sdl_selected,
   c(13, 15, 17, 14, 16, 18, 7, 9, 11, 8, 10, 12, 1, 3, 5, 2, 4, 6)]))
 
 counts_file <- file.path(data_dir, "rnaseq/counts.csv")

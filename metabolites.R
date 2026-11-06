@@ -164,25 +164,37 @@ aa <- sort(c("Cys", "Asp", "Glu", "Asn", "Ser", "Gln", "Gly", "His",
     "Phe"))
 
 hplc_aa <- hplc[, c("genotype", "treatment", "tissue", aa)]
-aa_base <- hplc_aa[hplc_aa$genotype == "wt" & hplc_aa$treatment == "ms", ]
-aa_base <- aa_base[, -2] %>%
-  tidyr::gather("aa", "amount", 3:ncol(.)) %>%
-  group_by(genotype, tissue, aa) %>%
-  summarise(Mean = mean(amount, na.rm = TRUE))
 
-hplc_fc <- hplc_aa[hplc_aa$genotype != "wt" & hplc_aa$treatment != "ms", ]
-hplc_fc <- hplc_fc %>%
-  tidyr::gather("aa", "amount", 4:ncol(.)) %>%
-  group_by(genotype, treatment, tissue, aa) %>%
-  summarise(Mean = mean(amount, na.rm = TRUE))
-hplc_fc$FC <- NA_real_
-for (i in 1:nrow(hplc_fc)) {
-  i_met <- hplc_fc$aa[i]
-  i_tiss <- hplc_fc$tissue[i]
-  hplc_fc$FC[i] <- hplc_fc$Mean[i] /
-    aa_base$Mean[aa_base$tissue == i_tiss & aa_base$aa == i_met]
+# Each genotype is compared with WT of the same tissue and Spd treatment.
+
+means <- hplc_aa %>%
+  tidyr::pivot_longer(all_of(aa), names_to = "AA", values_to = "Amount") %>%
+  group_by(genotype, treatment, tissue, AA) %>%
+  summarise(Mean = mean(Amount, na.rm = TRUE), .groups = "drop")
+
+control <- means[means$genotype == "wt", c("treatment", "tissue", "AA", "Mean")]
+names(control)[4] <- "WT_mean"
+
+fold_changes <- means[means$genotype %in% c("mtn1121", "g3"), ] %>%
+  left_join(control, by = c("treatment", "tissue", "AA")) %>%
+  mutate(FC = Mean / WT_mean, log2FC = log2(FC))
+
+if (any(!is.finite(fold_changes$log2FC))) {
+  stop("Non-finite amino-acid fold changes: check the WT denominators")
 }
-hplc_fc <- hplc_fc[, -5] %>%
-  tidyr::spread("aa", "FC")
-readr::write_tsv(hplc_fc, "HPLC_AA_foldchange.tsv")
 
+readr::write_tsv(fold_changes, "amino_acid_fold_changes.tsv")
+
+fold_changes$Group <- with(fold_changes, paste(genotype, treatment, tissue, sep = ":"))
+fold_changes$AA <- factor(fold_changes$AA, levels = aa)
+
+plot <- ggplot(fold_changes, aes(AA, Group, colour = log2FC, size = abs(log2FC))) +
+  geom_point() +
+  scale_colour_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0,
+    name = "log2 fold change") +
+  scale_size_area(max_size = 6, name = "Absolute log2 fold change") +
+  labs(x = NULL, y = NULL) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggsave("amino_acid_fold_changes.pdf", plot, width = 10, height = 4)

@@ -96,6 +96,53 @@ for (column in seq_len(ncol(go_sheet) - 3L)) {
 
 readr::write_tsv(do.call(rbind, go), file.path(rna_folder, "go_terms.tsv"))
 
+# DMR intervals: Dataset S5, with one 22-column block per comparison.
+
+dmr_sheet <- readxl::read_xlsx(workbook, sheet = "Dataset S5",
+  col_names = FALSE, col_types = "text", .name_repair = "minimal")
+
+dmr_names <- c(
+  "WT MS vs mtn1-1mtn2-1 MS" = "wtms_vs_mtnms",
+  "WT MS vs G3 MS" = "wtms_vs_g3ms",
+  "mtn1-1mtn2-1 MS vs G3 MS" = "mtnms_vs_g3ms",
+  "WT Spd vs mtn1-1mtn2-1 Spd" = "wtspd_vs_mtnspd",
+  "WT Spd vs G3 Spd" = "wtspd_vs_g3spd",
+  "mtn1-1mtn2-1 Spd vs G3 Spd" = "mtnspd_vs_g3spd",
+  "mtn1-1mtn2-1 MS vs Spd" = "mtnms_vs_mtnspd",
+  "G3 MS vs Spd" = "g3ms_vs_g3spd"
+)
+
+dmr_folder <- file.path(data_dir, "dmrs")
+dir.create(dmr_folder, recursive = TRUE, showWarnings = FALSE)
+
+for (column in seq_len(ncol(dmr_sheet) - 21L)) {
+
+  if (!identical(dmr_sheet[[column]][3], "seqnames")) {
+    next
+  }
+
+  comparison <- dmr_names[dmr_sheet[[column]][2]]
+
+  if (is.na(comparison)) {
+    stop("Unknown DMR comparison: ", dmr_sheet[[column]][2])
+  }
+
+  x <- as.data.frame(dmr_sheet[-(1:3), column:(column + 21L)])
+  names(x) <- as.character(unlist(dmr_sheet[3, column:(column + 21L)]))
+  x <- x[!is.na(x$seqnames), ]
+
+  for (field in setdiff(names(x), c("seqnames", "strand", "context", "regionType"))) {
+    x[[field]] <- suppressWarnings(as.numeric(x[[field]]))
+  }
+
+  if (anyNA(x[, c("start", "end", "context", "regionType")])) {
+    stop("Incomplete DMR intervals in ", comparison)
+  }
+
+  readr::write_tsv(x, file.path(dmr_folder, paste0(comparison, ".tsv")))
+
+}
+
 # Optional count-based correlations from the two GEO count matrices.
 
 bud_counts <- file.path(data_dir, "flowerbuds_counts.csv")

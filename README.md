@@ -6,7 +6,7 @@ Shell and R scripts for [Methylthioadenosine-driven rewiring of sulfur assimilat
 
 Keep this folder as code only. By default the scripts read `../mtn-data/` and write `../mtn-output/`. Set `MTN_DATA` and `MTN_OUTPUT` to use other locations.
 
-Download the supplementary workbook from the paper as `../mtn-data/supplementary_datasets.xlsx`. Download the files from [Zenodo](https://zenodo.org/records/18282656) into `../mtn-data/zenodo/`, keeping their published filenames. Optional GEO count matrices (`flowerbuds_counts.csv`, `seedlings_counts.csv`) go directly in `../mtn-data/`.
+Download the supplementary workbook from the paper as `../mtn-data/supplementary_datasets.xlsx`. Download the files from [Zenodo](https://zenodo.org/records/18282656) into `../mtn-data/zenodo/`, keeping their published filenames. Optional count and TPM matrices from [GEO GSE288809](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE288809) (`flowerbuds_counts.csv`, `seedlings_counts.csv`, `flowerbuds_tpm.csv`, `seedlings_tpm.csv`) go directly in `../mtn-data/`. Decompress the GEO files and remove their accession prefixes to obtain these names.
 
 In R, install the packages needed for the analyses you want to run:
 
@@ -24,15 +24,53 @@ Run these commands from this folder; choose whichever analyses you need:
 ```sh
 Rscript --vanilla prepare_data.R
 Rscript --vanilla phenotypes.R
+Rscript --vanilla development.R
 Rscript --vanilla phenotypes_supplement.R
 Rscript --vanilla metabolites.R
 Rscript --vanilla tor.R
 Rscript --vanilla methyl_index.R
 Rscript --vanilla rnaseq.R
 Rscript --vanilla rnaseq_go.R
+Rscript --vanilla dmrs.R
 ```
 
-`prepare_data.R` reads supplementary Datasets S1–S4 and the Zenodo phenotype workbook. RNA-seq plotting uses the supplied contrasts and TPMs; count correlations additionally need the GEO count matrices. TE volcano plots need Araport11 GFF3 at `../mtn-data/reference/Araport11_GFF3_genes_transposons.gff3`. The GO script plots the published term P-values. Calculations use the values in the public downloads. These scripts generate analysis components, not final figure layouts or PCA plots.
+`prepare_data.R` reads supplementary Datasets S1–S5 and the Zenodo phenotype workbook. RNA-seq plotting uses the supplied contrasts and TPMs; count correlations additionally need the GEO count matrices. TE volcano plots and DMR/gene overlaps need Araport11 GFF3 at `../mtn-data/reference/Araport11_GFF3_genes_transposons.gff3`.
+
+## Scripts and figures
+
+Figure numbers refer to the published paper.
+
+| Figure | Script(s) |
+| --- | --- |
+| 1B–E | `phenotypes.R` |
+| 2B, D, G, H | `development.R` |
+| 3D–H | `metabolites.R` |
+| 4A–E | `metabolites.R` |
+| 5A | `metabolites.R` |
+| 5C–D | `tor.R` |
+| 6A–B, D–I | `rnaseq.R` |
+| 6C | `rnaseq_go.R` |
+| 7A–B | `methyl_index.R` |
+| 7C–F | `bisulfite.sh`, `methylation_profiles.R` |
+| S1A–B | `phenotypes.R` |
+| S2A–B | `phenotypes_supplement.R` |
+| S3A–C | `metabolites.R` |
+| S5C–D | `tor.R` |
+| S6–S7 | `rnaseq.R` |
+| S8A–C, S10A–B | `dmrs.R` |
+
+`prepare_data.R` supplies inputs for the table-based analyses. `rnaseq.sh` and `annotate_rnaseq.R` provide the raw-read RNA-seq processing route; `common.R` supplies shared paths and package checks.
+
+## Recalculate RNA-seq differential expression
+
+With both GEO count matrices present, the following fits each pairwise comparison with DESeq2. TPM matrices are also needed to plot the recalculated tables.
+
+```sh
+Rscript --vanilla rnaseq_de.R
+Rscript --vanilla rnaseq.R ../mtn-output/rnaseq_de
+```
+
+Use the actual output path in the second command if `MTN_OUTPUT` is set. `rnaseq_de.R bud` or `rnaseq_de.R seedling` runs one tissue only; `rnaseq.R` expects both tissues.
 
 ## Process sequencing reads
 
@@ -61,4 +99,4 @@ bash bisulfite.sh profiles
 Rscript --vanilla methylation_profiles.R
 ```
 
-The RNA processing script explicitly uses HOMER/DESeq2. `THREADS`, `REFERENCE`, `ANNOTATION` and `PREPDE` can override defaults. The raw-read commands have not been tested by rerunning the full sequencing experiment. DMR calling is not included.
+The RNA processing script uses HOMER/DESeq2. `THREADS`, `REFERENCE`, `ANNOTATION` and `PREPDE` can override defaults.
