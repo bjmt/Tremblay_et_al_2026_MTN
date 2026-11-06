@@ -63,7 +63,16 @@ Figure numbers refer to the published paper.
 
 ## Recalculate RNA-seq differential expression
 
-Use the original StringTie/prepDE count matrices, with the short sample names shown below. Place the bud matrix at `../mtn-data/rnaseq/rna_bud/gene_count_matrix.csv` and the seedling matrix at `../mtn-data/rnaseq/rna_seedling/gene_count_matrix.csv`. Alternatively, generate them from reads with the `align` and `counts` stages below; the R scripts also read those outputs directly.
+Download the [original StringTie/prepDE count matrices](https://github.com/bjmt/Tremblay_et_al_2026_MTN/releases/download/rnaseq-counts/mtn-rnaseq-counts.tar.gz) and extract them into `../mtn-data/rnaseq/`:
+
+```sh
+mkdir -p ../mtn-data/rnaseq
+curl -fL -o ../mtn-data/rnaseq/mtn-rnaseq-counts.tar.gz \
+  https://github.com/bjmt/Tremblay_et_al_2026_MTN/releases/download/rnaseq-counts/mtn-rnaseq-counts.tar.gz
+tar -xzf ../mtn-data/rnaseq/mtn-rnaseq-counts.tar.gz -C ../mtn-data/rnaseq
+```
+
+Alternatively, generate the matrices from reads with the `align` and `counts` stages below; the R scripts also read those outputs directly.
 
 The following applies the original count/rRNA filters and fits each comparison with DESeq2. Run `prepare_data.R` first to supply supplementary-table TPMs for plotting.
 
