@@ -87,3 +87,10 @@ for (field in names(fields)) {
 }
 
 readr::write_tsv(x, "gene_count_diff.annotated.tsv")
+
+# Keep both tissues together so rnaseq.R can read the processing outputs.
+
+folder <- file.path(dirname(work), "rnaseq")
+dir.create(folder, showWarnings = FALSE)
+tissue <- if (assay == "rna_bud") "bud" else "seedling"
+readr::write_tsv(x, file.path(folder, paste0(tissue, ".tsv")))

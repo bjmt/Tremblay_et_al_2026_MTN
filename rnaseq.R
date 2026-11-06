@@ -29,9 +29,8 @@ plot_euler <- function(x) {
 bud <- readr::read_tsv(file.path(contrast_folder, "bud.tsv"), show_col_types = FALSE)
 sdl <- readr::read_tsv(file.path(contrast_folder, "seedling.tsv"), show_col_types = FALSE)
 
-if (ncol(bud) < 52 || ncol(sdl) < 46) {
-  stop("Run prepare_data.R to supply supplementary-table TPMs, then rerun rnaseq_de.R")
-}
+bud_m <- rna_tpm_matrix(bud, "bud")
+sdl_m <- rna_tpm_matrix(sdl, "seedling")
 
 # Missing tests are not significant. Use 1 only in the local plotting copies;
 # leave NA values intact in the statistical result files.
@@ -191,20 +190,11 @@ readr::write_lines(
       bud_ms_mat2[, 2] & bud_ms_mat2[, 3]],
   "gene_lists/Bud_MS_wtmtnDown_mtng3Up.txt")
 
-bud_m <- as.matrix(bud[, 29:52])
-rownames(bud_m) <- bud$Gene
-sdl_m <- as.matrix(sdl[, 29:46])
-rownames(sdl_m) <- sdl$Gene
-
-colnames(bud_m) <- gsub(" TPM", "", colnames(bud_m), TRUE)
-colnames(sdl_m) <- gsub(" TPM", "", colnames(sdl_m), TRUE)
-
 bud_selected <- head(order(rowVars(bud_m), decreasing = TRUE, na.last = NA), 1000)
 sdl_selected <- head(order(rowVars(sdl_m), decreasing = TRUE, na.last = NA), 2000)
 
-bud_pcc2 <- cor(scale(bud_m[bud_selected, c(17:24, 9:16, 1:8)]))
-sdl_pcc2 <- cor(scale(sdl_m[sdl_selected,
-  c(13, 15, 17, 14, 16, 18, 7, 9, 11, 8, 10, 12, 1, 3, 5, 2, 4, 6)]))
+bud_pcc2 <- cor(scale(bud_m[bud_selected, , drop = FALSE]))
+sdl_pcc2 <- cor(scale(sdl_m[sdl_selected, , drop = FALSE]))
 
 have_counts <- !is.null(rna_count_file("bud", required = FALSE)) &&
   !is.null(rna_count_file("seedling", required = FALSE))
@@ -220,8 +210,8 @@ if (have_counts) {
   bud_genes <- head(order(rowVars(bud_counts), decreasing = TRUE), 1000)
   sdl_genes <- head(order(rowVars(sdl_counts), decreasing = TRUE), 1000)
 
-  bud_pcc <- cor(scale(bud_counts[bud_genes, c(17:24, 9:16, 1:8)]))
-  sdl_pcc <- cor(scale(sdl_counts[sdl_genes, c(13:18, 1:6, 7:12)]))
+  bud_pcc <- cor(scale(bud_counts[bud_genes, colnames(bud_m)]))
+  sdl_pcc <- cor(scale(sdl_counts[sdl_genes, colnames(sdl_m)]))
 
 } else {
   message("Skipping count-based correlations: supply the original counts or run rnaseq.sh counts.")
@@ -434,7 +424,7 @@ if (file.exists(annotation)) {
   with(te_wt_mtn_sdl, {
     pdf("TE_genes_Seedlings_WTms_mtnms.pdf", width = 4.2, height = 3.6)
     plot(FC, -log10(Pval), pch = 19, cex = 0.4,
-      bty = "n", ylab = expression(-log[10](Pvalue)),
+      bty = "n", ylab = expression(-log[10](FDR)),
       main = expression(paste("WT vs. ", italic("mtn1-1mtn2-1"), " (Seedlings)")),
       xlab = expression(log[2](FC)), col = "grey"
     )
@@ -461,7 +451,7 @@ if (file.exists(annotation)) {
   with(te_wt_mtn_bud, {
     pdf("TE_genes_Buds_WTms_mtnms.pdf", width = 4.2, height = 3.6)
     plot(FC, -log10(Pval), pch = 19, cex = 0.4,
-      bty = "n", ylab = expression(-log[10](Pvalue)),
+      bty = "n", ylab = expression(-log[10](FDR)),
       main = expression(paste("WT vs. ", italic("mtn1-1mtn2-1"), " (Buds)")),
       xlab = expression(log[2](FC)), col = "grey"
     )
@@ -488,7 +478,7 @@ if (file.exists(annotation)) {
   with(te_wt_m5_sdl, {
     pdf("TE_genes_Seedlings_WTms_m5ms.pdf", width = 4.2, height = 3.6)
     plot(FC, -log10(Pval), pch = 19, cex = 0.4,
-      bty = "n", ylab = expression(-log[10](Pvalue)),
+      bty = "n", ylab = expression(-log[10](FDR)),
       main = expression(paste("WT vs. ", italic("mtn1-1mtn2-5"), " (Seedlings)")),
       xlab = expression(log[2](FC)), col = "grey"
     )
@@ -515,7 +505,7 @@ if (file.exists(annotation)) {
   with(te_wt_g3_bud, {
     pdf("TE_genes_Buds_WTms_G3ms.pdf", width = 4.2, height = 3.6)
     plot(FC, -log10(Pval), pch = 19, cex = 0.4,
-      bty = "n", ylab = expression(-log[10](Pvalue)),
+      bty = "n", ylab = expression(-log[10](FDR)),
       main = expression("WT vs. G3 (Buds)"),
       xlab = expression(log[2](FC)), col = "grey"
     )

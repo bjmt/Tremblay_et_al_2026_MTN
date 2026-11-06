@@ -232,9 +232,9 @@ f1 <- ggplot() +
   geom_errorbar(aes(Genotype, ymin = SeedsNum.mid, ymax = SeedsNum.mid, group = Treatment),
     data = g3fertStats, width = 0.5, position = position_dodge(.75)) +
   theme_bw() +
-  scale_colour_manual(values = c("black", "brown"), limits = c("Spd", "MS"),
-    labels = c("-Spd", "+Spd"),
-    name = element_blank()) +
+  scale_colour_manual(values = c("MS" = "black", "Spd" = "brown"),
+    breaks = c("MS", "Spd"), labels = c("-Spd", "+Spd"),
+    name = NULL) +
   ylab("Total seed count") +
   xlab(NULL) +
   ylim(c(0, 18000)) +
@@ -364,6 +364,6 @@ cowplot::save_plot(
     f1, f2, f3, f4, f5,
     p1, p2, p3, NULL, NULL
   ),
-  base_height = 6, base_width = 5
+  base_height = 9, base_width = 8
 )
 

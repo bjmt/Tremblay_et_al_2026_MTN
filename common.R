@@ -105,6 +105,45 @@ read_rna_counts <- function(tissue) {
 
 }
 
+rna_tpm_matrix <- function(table, tissue) {
+
+  columns <- grep(" TPM$", names(table), value = TRUE)
+  samples <- sub(" TPM$", "", columns)
+  samples <- gsub(" rep ", " ", samples, fixed = TRUE)
+
+  labels <- c(
+    "WT MS" = "wm", "WT Spd" = "ws",
+    "mtn1-1mtn2-1 MS" = "mm", "mtn1-1mtn2-1 Spd" = "ms",
+    "mtn1-1mtn2-5 MS" = "5m", "mtn1-1mtn2-5 Spd" = "5s",
+    "G3 MS" = "gm", "G3 Spd" = "gs"
+  )
+
+  for (label in names(labels)) {
+    samples <- sub(paste0("^", label, " ([1-4])$"),
+      paste0(labels[[label]], "\\1"), samples)
+  }
+
+  if (tissue == "bud") {
+    groups <- c("wm", "ws", "mm", "ms", "gm", "gs")
+    replicates <- 1:4
+  } else {
+    groups <- c("wm", "ws", "5m", "5s", "mm", "ms")
+    replicates <- 1:3
+  }
+
+  expected <- unlist(lapply(groups, function(group) paste0(group, replicates)))
+
+  if (anyDuplicated(samples) || !setequal(samples, expected)) {
+    stop("Missing or unrecognised ", tissue, " TPM sample names")
+  }
+
+  matrix <- as.matrix(table[, columns[match(expected, samples)]])
+  rownames(matrix) <- table$Gene
+  colnames(matrix) <- expected
+  matrix
+
+}
+
 start_analysis <- function(name, packages = character()) {
 
   need_packages(packages)

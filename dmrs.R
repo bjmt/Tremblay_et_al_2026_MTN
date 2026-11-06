@@ -10,6 +10,14 @@ source(file.path(script_folder, "common.R"))
 
 start_analysis("dmrs", c("readr", "UpSetR"))
 
+calculate_go <- "--go" %in% commandArgs(TRUE)
+
+if (calculate_go) {
+  need_packages(c("gprofiler2", "ggplot2"))
+}
+
+go_tables <- list()
+
 files <- list.files(input_path("dmrs"), "[.]tsv$", full.names = TRUE)
 tables <- lapply(files, readr::read_tsv, show_col_types = FALSE)
 names(tables) <- sub("[.]tsv$", "", basename(files))
@@ -143,14 +151,54 @@ if (file.exists(annotation_file)) {
     overlapping_genes <- as.character(genes$ID[overlap])
 
     for (direction in names(selected)) {
-      readr::write_lines(intersect(selected[[direction]], overlapping_genes),
-        paste0(direction, "_", context, "_dmr_genes.txt"))
+      selected_genes <- intersect(selected[[direction]], overlapping_genes)
+      readr::write_lines(selected_genes, paste0(direction, "_", context, "_dmr_genes.txt"))
+
+      if (calculate_go && context == "CG" && length(selected_genes)) {
+
+        result <- gprofiler2::gost(selected_genes, organism = "athaliana")
+
+        if (!is.null(result$result)) {
+
+          x <- result$result[, c("term_id", "term_name", "p_value", "source",
+            "query_size", "intersection_size", "term_size", "effective_domain_size")]
+          x$Direction <- direction
+          x$FoldEnrichment <- (x$intersection_size / x$query_size) /
+            (x$term_size / x$effective_domain_size)
+          go_tables[[direction]] <- x
+
+        }
+
+      }
     }
 
   }
 
 } else {
 
+  if (calculate_go) {
+    stop("DMR-associated GO enrichment requires the Araport11 GFF3")
+  }
+
   message("Skipping DMR/gene overlaps: supply the Araport11 GFF3 under reference/.")
+
+}
+
+if (length(go_tables)) {
+
+  go <- do.call(rbind, go_tables)
+  readr::write_tsv(go, "dmr_go_terms.tsv")
+  go <- go[go$source == "GO:BP", ]
+  go <- do.call(rbind, lapply(split(go, go$Direction), function(x) {
+    head(x[order(x$p_value), ], 10)
+  }))
+
+  plot <- ggplot2::ggplot(go, ggplot2::aes(Direction, term_name,
+    size = FoldEnrichment, colour = -log10(p_value))) +
+    ggplot2::geom_point() +
+    ggplot2::labs(x = NULL, y = NULL, size = "Fold enrichment", colour = "-log10(P)") +
+    ggplot2::theme_bw()
+
+  ggplot2::ggsave("dmr_go_terms.pdf", plot, width = 8, height = 6)
 
 }
