@@ -23,9 +23,9 @@ In R, install the packages needed for the analyses you want to run:
 
 ```r
 install.packages(c("ggplot2", "dplyr", "readr", "readxl", "tidyr", "rstatix",
-  "multcompView", "cowplot", "eulerr", "matrixStats", "UpSetR", "circlize", "viridis"))
+  "multcompView", "cowplot", "eulerr", "matrixStats", "UpSetR", "circlize", "viridis", "betareg"))
 install.packages("BiocManager")
-BiocManager::install(c("ComplexHeatmap", "rtracklayer", "DESeq2"))
+BiocManager::install(c("ComplexHeatmap", "rtracklayer", "DESeq2", "DMRcaller"))
 ```
 
 ## Analyse the downloaded tables
@@ -73,7 +73,7 @@ Figure numbers refer to the published paper.
 | S8A–C, S10A–B | `dmrs.R` |
 | S9 | `dmrs.R --go` |
 
-`prepare_data.R` supplies inputs for the table-based analyses. `rnaseq.sh` and `annotate_rnaseq.R` provide the raw-read RNA-seq processing route; `common.R` supplies shared paths and package checks.
+`prepare_data.R` supplies inputs for the table-based analyses. `rnaseq.sh` and `annotate_rnaseq.R` provide the raw-read RNA-seq processing route; `dmr_calling.R` calls DMRs from Bismark reports; `common.R` supplies shared paths and package checks.
 
 To recalculate the metabolite PCA from measurements, install `pcaMethods` with `BiocManager::install("pcaMethods")` and run `Rscript --vanilla pca.R --recalculate`. The internode PCA is calculated from measurements in both modes.
 
@@ -127,8 +127,12 @@ Rscript --vanilla rnaseq.R ../mtn-output/preprocessing/rnaseq
 
 bash bisulfite.sh align
 bash bisulfite.sh extract
+Rscript --vanilla dmr_calling.R
+Rscript --vanilla dmrs.R ../mtn-output/dmr_calling
 bash bisulfite.sh profiles
 Rscript --vanilla methylation_profiles.R
 ```
 
 The RNA processing script uses HOMER/DESeq2. `THREADS`, `REFERENCE`, `ANNOTATION` and `PREPDE` can override defaults.
+
+`dmr_calling.R` runs the nine genotype/treatment comparisons with DMRcaller, using three replicates per group and the `bins` method. To run one comparison, use e.g. `Rscript --vanilla dmr_calling.R wtms_vs_mtnms`. `THREADS` sets the number of cores. The DMR plotting script accepts the resulting folder, with an optional `--go` for enrichment.

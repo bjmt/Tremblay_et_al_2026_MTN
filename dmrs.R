@@ -11,6 +11,9 @@ source(file.path(script_folder, "common.R"))
 start_analysis("dmrs", c("readr", "UpSetR"))
 
 calculate_go <- "--go" %in% commandArgs(TRUE)
+args <- commandArgs(TRUE)
+args <- args[args != "--go"]
+folder <- if (length(args)) normalizePath(args[1], mustWork = TRUE) else input_path("dmrs")
 
 if (calculate_go) {
   need_packages(c("gprofiler2", "ggplot2"))
@@ -18,7 +21,7 @@ if (calculate_go) {
 
 go_tables <- list()
 
-files <- list.files(input_path("dmrs"), "[.]tsv$", full.names = TRUE)
+files <- list.files(folder, "[.]tsv$", full.names = TRUE)
 tables <- lapply(files, readr::read_tsv, show_col_types = FALSE)
 names(tables) <- sub("[.]tsv$", "", basename(files))
 

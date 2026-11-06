@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Usage: bash bisulfite.sh align|extract|profiles
-# This script stops at methylation profiles; it does not call DMRs.
+# Run dmr_calling.R after extract to call differentially methylated regions.
 
 set -euo pipefail
 
