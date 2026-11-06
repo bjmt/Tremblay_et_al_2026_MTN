@@ -143,44 +143,6 @@ for (column in seq_len(ncol(dmr_sheet) - 21L)) {
 
 }
 
-# Optional count-based correlations from the two GEO count matrices.
-
-bud_counts <- file.path(data_dir, "flowerbuds_counts.csv")
-seedling_counts <- file.path(data_dir, "seedlings_counts.csv")
-
-if (file.exists(bud_counts) && file.exists(seedling_counts)) {
-
-  bud <- readr::read_csv(bud_counts, show_col_types = FALSE)
-  seedling <- readr::read_csv(seedling_counts, show_col_types = FALSE)
-
-  bud_columns <- character()
-  seedling_columns <- character()
-
-  for (genotype in c("wt", "mtn11mtn21", "g3")) {
-    for (treatment in c("ms", "spd")) {
-      bud_columns <- c(bud_columns, paste0("bud_", genotype, "_", treatment, "_", 1:4))
-    }
-  }
-
-  for (genotype in c("mtn11mtn21", "mtn11mtn25", "wt")) {
-    for (treatment in c("ms", "spd")) {
-      seedling_columns <- c(seedling_columns,
-        paste0("sdl_", genotype, "_", treatment, "_", 1:3))
-    }
-  }
-
-  genes <- bud$gene_id[bud$gene_id %in% seedling$gene_id]
-
-  counts <- cbind(
-    data.frame(gene_id = genes),
-    as.data.frame(bud[match(genes, bud$gene_id), bud_columns]),
-    as.data.frame(seedling[match(genes, seedling$gene_id), seedling_columns])
-  )
-
-  readr::write_csv(counts, file.path(rna_folder, "counts.csv"))
-
-}
-
 # Phenotype tables from the Zenodo downloads.
 
 zenodo <- file.path(data_dir, "zenodo")

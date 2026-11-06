@@ -30,7 +30,7 @@ bud <- readr::read_tsv(file.path(contrast_folder, "bud.tsv"), show_col_types = F
 sdl <- readr::read_tsv(file.path(contrast_folder, "seedling.tsv"), show_col_types = FALSE)
 
 if (ncol(bud) < 52 || ncol(sdl) < 46) {
-  stop("Correlation plots require the GEO TPM matrices; rerun rnaseq_de.R with those files present")
+  stop("Run prepare_data.R to supply supplementary-table TPMs, then rerun rnaseq_de.R")
 }
 
 # Missing tests are not significant. Use 1 only in the local plotting copies;
@@ -206,18 +206,25 @@ bud_pcc2 <- cor(scale(bud_m[bud_selected, c(17:24, 9:16, 1:8)]))
 sdl_pcc2 <- cor(scale(sdl_m[sdl_selected,
   c(13, 15, 17, 14, 16, 18, 7, 9, 11, 8, 10, 12, 1, 3, 5, 2, 4, 6)]))
 
-counts_file <- file.path(data_dir, "rnaseq/counts.csv")
-have_counts <- file.exists(counts_file)
+have_counts <- !is.null(rna_count_file("bud", required = FALSE)) &&
+  !is.null(rna_count_file("seedling", required = FALSE))
+
 if (have_counts) {
 
-  gcm <- readr::read_csv(counts_file)
-  bud_pcc <- cor(scale(as.matrix(gcm[order(rowVars(as.matrix(gcm[, 2:25])),
-          decreasing = TRUE)[1:1000], 2:25])))
-  sdl_pcc <- cor(scale(as.matrix(gcm[order(rowVars(as.matrix(gcm[, c(38:43, 32:37, 26:31)])),
-          decreasing = TRUE)[1:1000], c(38:43, 32:37, 26:31)])))
+  bud_counts <- read_rna_counts("bud")
+  sdl_counts <- read_rna_counts("seedling")
+
+  bud_counts <- bud_counts[!grepl("^STR", rownames(bud_counts)), , drop = FALSE]
+  sdl_counts <- sdl_counts[!grepl("^STR", rownames(sdl_counts)), , drop = FALSE]
+
+  bud_genes <- head(order(rowVars(bud_counts), decreasing = TRUE), 1000)
+  sdl_genes <- head(order(rowVars(sdl_counts), decreasing = TRUE), 1000)
+
+  bud_pcc <- cor(scale(bud_counts[bud_genes, c(17:24, 9:16, 1:8)]))
+  sdl_pcc <- cor(scale(sdl_counts[sdl_genes, c(13:18, 1:6, 7:12)]))
 
 } else {
-  message("Skipping count-based correlations: supply the GEO counts and rerun prepare_data.R.")
+  message("Skipping count-based correlations: supply the original counts or run rnaseq.sh counts.")
 }
 
 comparisons_bud <- list(

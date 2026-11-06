@@ -6,7 +6,7 @@ Shell and R scripts for [Methylthioadenosine-driven rewiring of sulfur assimilat
 
 Keep this folder as code only. By default the scripts read `../mtn-data/` and write `../mtn-output/`. Set `MTN_DATA` and `MTN_OUTPUT` to use other locations.
 
-Download the supplementary workbook from the paper as `../mtn-data/supplementary_datasets.xlsx`. Download the files from [Zenodo](https://zenodo.org/records/18282656) into `../mtn-data/zenodo/`, keeping their published filenames. Optional count and TPM matrices from [GEO GSE288809](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE288809) (`flowerbuds_counts.csv`, `seedlings_counts.csv`, `flowerbuds_tpm.csv`, `seedlings_tpm.csv`) go directly in `../mtn-data/`. Decompress the GEO files and remove their accession prefixes to obtain these names.
+Download the supplementary workbook from the paper as `../mtn-data/supplementary_datasets.xlsx`. Download the files from [Zenodo](https://zenodo.org/records/18282656) into `../mtn-data/zenodo/`, keeping their published filenames.
 
 In R, install the packages needed for the analyses you want to run:
 
@@ -34,7 +34,7 @@ Rscript --vanilla rnaseq_go.R
 Rscript --vanilla dmrs.R
 ```
 
-`prepare_data.R` reads supplementary Datasets S1–S5 and the Zenodo phenotype workbook. RNA-seq plotting uses the supplied contrasts and TPMs; count correlations additionally need the GEO count matrices. TE volcano plots and DMR/gene overlaps need Araport11 GFF3 at `../mtn-data/reference/Araport11_GFF3_genes_transposons.gff3`.
+`prepare_data.R` reads supplementary Datasets S1–S5 and the Zenodo phenotype workbook. RNA-seq plotting uses the supplied contrasts and TPMs; count correlations additionally use the original count matrices described below. TE volcano plots and DMR/gene overlaps need Araport11 GFF3 at `../mtn-data/reference/Araport11_GFF3_genes_transposons.gff3`.
 
 ## Scripts and figures
 
@@ -63,7 +63,9 @@ Figure numbers refer to the published paper.
 
 ## Recalculate RNA-seq differential expression
 
-With both GEO count matrices present, the following fits each pairwise comparison with DESeq2. TPM matrices are also needed to plot the recalculated tables.
+Use the original StringTie/prepDE count matrices, with the short sample names shown below. Place the bud matrix at `../mtn-data/rnaseq/rna_bud/gene_count_matrix.csv` and the seedling matrix at `../mtn-data/rnaseq/rna_seedling/gene_count_matrix.csv`. Alternatively, generate them from reads with the `align` and `counts` stages below; the R scripts also read those outputs directly.
+
+The following applies the original count/rRNA filters and fits each comparison with DESeq2. Run `prepare_data.R` first to supply supplementary-table TPMs for plotting.
 
 ```sh
 Rscript --vanilla rnaseq_de.R
