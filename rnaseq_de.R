@@ -24,8 +24,6 @@ rrna <- c("AT2G01010", "AT2G01020", "AT3G41768", "AT3G41979", "ATCG00920",
   "ATCG00950", "ATCG00960", "ATCG00970", "ATCG01160", "ATCG01170",
   "ATCG01180", "ATCG01210")
 
-agreement <- list()
-
 for (tissue in tissues) {
 
   counts <- read_rna_counts(tissue)
@@ -81,58 +79,21 @@ for (tissue in tissues) {
   # Fit before excluding novel StringTie identifiers: they contribute to fitting
   # and multiplicity adjustment, but are not retained in the gene figure tables.
   result_table <- result_table[!grepl("^STR", result_table$Gene), ]
-  readr::write_tsv(result_table, paste0(tissue, ".tsv"))
+  # Add the supplementary-table TPMs for plotting.
+  tpm_file <- file.path(data_dir, "rnaseq", paste0(tissue, ".tsv"))
 
-  # Add the supplementary-table TPMs for plotting, and compare with its statistics.
-  reference_file <- file.path(data_dir, "rnaseq", paste0(tissue, ".tsv"))
+  if (file.exists(tpm_file)) {
 
-  if (file.exists(reference_file)) {
-
-    reference <- readr::read_tsv(reference_file, show_col_types = FALSE)
-    tpm_columns <- grep(" TPM$", names(reference), value = TRUE)
-    tpm_index <- match(result_table$Gene, reference$Gene)
+    tpm <- readr::read_tsv(tpm_file, show_col_types = FALSE)
+    tpm_columns <- grep(" TPM$", names(tpm), value = TRUE)
+    tpm_index <- match(result_table$Gene, tpm$Gene)
 
     for (column in tpm_columns) {
-      result_table[[column]] <- reference[[column]][tpm_index]
-    }
-
-    readr::write_tsv(result_table, paste0(tissue, ".tsv"))
-    index <- match(result_table$Gene, reference$Gene)
-
-    for (indices in pair_indices) {
-
-      comparison <- paste(group_order[indices], collapse = " vs. ")
-      fc_name <- paste(comparison, "Log2 Fold Change")
-      fdr_name <- paste(comparison, "adj. p-value")
-
-      fc <- result_table[[fc_name]]
-      expected_fc <- reference[[fc_name]][index]
-      fdr <- result_table[[fdr_name]]
-      expected_fdr <- reference[[fdr_name]][index]
-      finite <- is.finite(fc) & is.finite(expected_fc)
-
-      significant <- is.finite(fdr) & fdr < .05 & is.finite(fc) & abs(fc) >= 1
-      expected_significant <- is.finite(expected_fdr) & expected_fdr < .05 &
-        is.finite(expected_fc) & abs(expected_fc) >= 1
-
-      agreement[[length(agreement) + 1L]] <- data.frame(
-        Tissue = tissue,
-        Comparison = comparison,
-        MatchedGenes = sum(!is.na(index)),
-        FiniteFoldChanges = sum(finite),
-        FoldChangeCorrelation = cor(fc[finite], expected_fc[finite]),
-        MaximumFoldChangeDifference = max(abs(fc[finite] - expected_fc[finite])),
-        DifferentSignificanceCalls = sum(significant != expected_significant, na.rm = TRUE)
-      )
-
+      result_table[[column]] <- tpm[[column]][tpm_index]
     }
 
   }
 
-}
+  readr::write_tsv(result_table, paste0(tissue, ".tsv"))
 
-if (length(agreement)) {
-  readr::write_tsv(do.call(rbind, agreement), "comparison_with_supplied_results.tsv")
 }
-
-writeLines(capture.output(sessionInfo()), "DESeq2_sessionInfo.txt")
